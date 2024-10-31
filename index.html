@@ -378,8 +378,10 @@
                 console.log("Member location properties:", e.features[0].properties);
                 const coordinates = e.features[0].geometry.coordinates.slice();
                 const url = e.features[0].properties.url; // Ensure 'url' exists in the feature properties
+                // Check if the URL already has "http" or "https" at the start
+                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
                 if (url) {
-                    window.open(url, '_blank'); // Open URL in a new tab
+                    window.open(fullUrl, '_blank'); // Open URL in a new tab
                 } else {
                     console.error('No URL found for this member location');
                 }
@@ -412,17 +414,13 @@
             }
         });
 
-        function onSourceDataLoaded(e) {
-            if (
-                e.sourceId === 'member-locations' &&
-                e.isSourceLoaded &&
-                map.isSourceLoaded('state-boundaries') &&
-                map.isSourceLoaded('member-locations')
-            ) {
-                console.log("Sources 'state-boundaries' and 'member-locations' are fully loaded.");
+        // Function to ensure sources are fully loaded before applying member counts
+        function onSourceDataLoaded() {
+            if (map.isSourceLoaded('state-boundaries') && map.isSourceLoaded('member-locations')) {
+                // Apply default member counts to avoid null warnings
                 applyDefaultMemberCounts();
+                // Calculate and apply actual member counts
                 calculateAndApplyMemberCounts();
-                map.off('sourcedata', onSourceDataLoaded); // Remove listener
             }
         }
 
@@ -440,7 +438,6 @@
                     memberCounts[state] = (memberCounts[state] || 0) + 1;
                 }
             });
-            console.log("Aggregated member counts by state:", memberCounts);
             // Apply the member counts to each state in `state-boundaries`
             applyMemberCountsToStates(memberCounts);
         }
@@ -484,7 +481,6 @@
                     { member_count: 0 } // Default to 0 to avoid nulls
                 );
             });
-            console.log("Default member counts applied to all states.");
         }
 
         // Retry mechanism to check sources repeatedly until they are fully loaded
@@ -493,7 +489,7 @@
                 console.log("Sources not yet fully loaded, retrying...");
                 setTimeout(waitForSources, 100); // Retry after 100 ms
             } else {
-                onSourceDataLoaded();
+                onSourceDataLoaded(); // Call once when sources are fully loaded
             }
         }
 
