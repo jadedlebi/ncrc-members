@@ -43,7 +43,7 @@
                 name: 'mercator'
             },
             center: [-96, 37.8],
-            zoom: 4
+            zoom: 3
         });
 
         // Add geolocate control to the map to find user location
@@ -146,7 +146,7 @@
                     'circle-stroke-color': 'black'
                 }
             });
-            
+            waitForSources();
             // Calculate member counts by state and apply to state boundaries
             const memberCounts = {};
             const features = map.querySourceFeatures('member-locations', { sourceLayer: 'members221022-82cdcp' });
@@ -487,11 +487,21 @@
             console.log("Default member counts applied to all states.");
         }
 
+        // Retry mechanism to check sources repeatedly until they are fully loaded
+        function waitForSources() {
+            if (!map.isSourceLoaded('state-boundaries') || !map.isSourceLoaded('member-locations')) {
+                console.log("Sources not yet fully loaded, retrying...");
+                setTimeout(waitForSources, 100); // Retry after 100 ms
+            } else {
+                onSourceDataLoaded();
+            }
+        }
+
         // Define the reset function
         function resetMap() {
             map.flyTo({
                 center: [-96, 37.8], // Original center
-                zoom: 4 // Original zoom level
+                zoom: 3 // Original zoom level
             });
             // Restore state-fill opacity and remove state-outline filter
             map.setFilter('state-fill', null);
