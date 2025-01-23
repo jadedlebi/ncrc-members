@@ -11,25 +11,129 @@
     <style>
         body { margin: 0; padding: 0; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-        #search-bar { position: absolute; top: 10px; left: 10px; z-index: 1; width: 300px; }
-        #reset-button button img { transition: transform 0.3s ease, opacity 0.3s ease; }
-        #reset-button button:hover img { transform: scale(1.2); opacity: 0.8; }
+        #search-bar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #reset-button {
+            position: relative;
+        }
+        #reset-button button {
+            padding: 6px 12px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+        }
+        #reset-button button:hover {
+            background: #f0f0f0;
+        }
+        #reset-button button img {
+            width: 40px;
+            height: 20px;
+            opacity: 0.8;
+        }
+        #reset-button .reset-hover-text {
+            visibility: hidden;
+            position: absolute;
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 5px 10px;
+            border-radius: 4px;
+            z-index: 1000;
+            white-space: nowrap;
+            font-size: 12px;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-top: 5px;
+        }
+        #reset-button:hover .reset-hover-text {
+            visibility: visible;
+        }
+        #reset-button button:hover {
+            background: #f0f0f0;
+        }
+        #reset-button button img {
+            width: 40px;
+            height: 20px;
+        }
+        #hover-text {
+            position: static;
+            visibility: visible;
+            transform: none;
+            background: none;
+            color: #666;
+            padding: 0;
+        }
         #ncrc-logo { position: absolute; bottom: 0.5px; left: 100px; z-index: 1; }
+        #ncrc-logo img {
+            height: 30px;
+        }
+        #member-list-container {
+            position: absolute;
+            top: 60px;
+            right: 10px;
+            width: 200px;
+            max-height: 80vh;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            overflow-y: auto;
+            display: none;
+            z-index: 2;
+            font-family: Arial, sans-serif;
+        }
+
+        .member-list-header {
+            position: sticky;
+            top: 0;
+            background: #173B4A;
+            color: white;
+            padding: 15px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 18px;
+            border-radius: 4px 4px 0 0;
+        }
+
+        .member-list-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .member-list-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .member-list-item:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="search-bar"></div>
-    <div id="reset-button" style="position: absolute; bottom: 10px; right: 10px; z-index: 1;">
-        <button onclick="resetMap()" style="padding: 8px; background: none; border: none; cursor: pointer; position: relative;">
-            <img src="https://raw.githubusercontent.com/jadedlebi/ncrc-members/refs/heads/main/us-outline2.png" alt="Show all states" style="width: 150px; height: 100px;">
-            <span id="hover-text" style="visibility: hidden; position: absolute; top: -25px; left: 50%; transform: translateX(-50%); background-color: black; color: white; padding: 5px 8px; border-radius: 3px; font-size: 12px;">
-                Show all states
-            </span>
-        </button>
+    <div id="search-bar">
+        <!-- Geocoder will be inserted here -->
     </div>
     <div id="ncrc-logo">
-        <img src="https://raw.githubusercontent.com/jadedlebi/ncrc-members/refs/heads/main/ncrc-logo.png" style="height: 30px;">
+        <img src="https://raw.githubusercontent.com/jadedlebi/ncrc-members/refs/heads/main/ncrc-logo.png">
+    </div>
+    <div id="member-list-container">
+        <div class="member-list-header">Members</div>
+        <div id="member-list"></div>
     </div>
 
     <script>
@@ -58,7 +162,20 @@
             accessToken: mapboxgl.accessToken,
             mapboxgl: mapboxgl
         });
+        
+        // First add the geocoder
         document.getElementById('search-bar').appendChild(geocoder.onAdd(map));
+        
+        // Then add the reset button
+        const resetButton = document.createElement('div');
+        resetButton.id = 'reset-button';
+        resetButton.innerHTML = `
+            <button onclick="resetMap()">
+                <img src="https://raw.githubusercontent.com/jadedlebi/ncrc-members/refs/heads/main/us-outline2.png" alt="Show all states">
+                <span class="reset-hover-text">Show all states</span>
+            </button>
+        `;
+        document.getElementById('search-bar').appendChild(resetButton);
 
         // Load the map layers and sources
         map.on('load', () => {
@@ -74,14 +191,19 @@
                 'source-layer': 'State_Shoreline-al2frv',
                 paint: {
                     'fill-color': [
-                        'interpolate',
-                        ['linear'],
-                        ['feature-state', 'member_count'], // Access member_count from feature state
-                        0, '#d3d3d3',      // Light color for 0 members
-                        5, '#a8c4ff',     // Moderate member count color
-                        10, '#4a90e2',     // Higher member count color
-                        20, '#174a7e',     // Highest member count color
-                        30, '#052142'
+                        'case',
+                        ['==', ['feature-state', 'member_count'], null],
+                        '#d3d3d3', // Default color for null values
+                        [
+                            'interpolate',
+                            ['linear'],
+                            ['coalesce', ['feature-state', 'member_count'], 0], // Use coalesce to handle null
+                            0, '#d3d3d3',      
+                            5, '#a8c4ff',     
+                            10, '#4a90e2',     
+                            20, '#174a7e',     
+                            30, '#052142'
+                        ]
                     ],
                     'fill-opacity': 0.6
                 }
@@ -98,16 +220,16 @@
                 }
             });
 
-            map.addSource('member-locations', {
+            map.addSource('members', {
                 type: 'vector',
-                url: 'mapbox://jedlebi.6zscwnmy'
+                url: 'mapbox://jedlebi.a1km3ixu'
             });
 
             map.addLayer({
-                id: 'member-locations-layer',
+                id: 'members-layer',
                 type: 'circle',
-                source: 'member-locations',
-                'source-layer': 'members221022-82cdcp',
+                source: 'members',
+                'source-layer': 'members-71z56w',
                 paint: {
                     'circle-radius': 8,
                     'circle-color': '#173B4A',
@@ -120,10 +242,10 @@
             });
 
             map.addLayer({
-                id: 'member-locations-layer-hover',
+                id: 'members-layer-hover',
                 type: 'circle',
-                source: 'member-locations',
-                'source-layer': 'members221022-82cdcp',
+                source: 'members',
+                'source-layer': 'members-71z56w',
                 paint: {
                     'circle-radius': [
                         'case',
@@ -146,10 +268,28 @@
                     'circle-stroke-color': 'black'
                 }
             });
+
+            map.addLayer({
+                id: 'members-highlight',
+                type: 'circle',
+                source: 'members',
+                'source-layer': 'members-71z56w',
+                paint: {
+                    'circle-radius': 15,
+                    'circle-color': '#FFC23A',
+                    'circle-opacity': 1,
+                    'circle-stroke-width': 3,
+                    'circle-stroke-color': '#FFFFFF'
+                },
+                layout: {
+                    'visibility': 'none'
+                }
+            });
+
             waitForSources();
             // Calculate member counts by state and apply to state boundaries
             const memberCounts = {};
-            const features = map.querySourceFeatures('member-locations', { sourceLayer: 'members221022-82cdcp' });
+            const features = map.querySourceFeatures('members', { sourceLayer: 'members-71z56w' });
 
             features.forEach((feature) => {
                 const state = feature.properties.state; // Assuming each member has a 'state' property
@@ -160,17 +300,8 @@
             let hoveredFeatureId = null;
 
             // Add hover effect for tooltip
-            const resetButton = document.getElementById('reset-button').querySelector('button');
             const hoverText = document.getElementById('hover-text');
             
-            resetButton.addEventListener('mouseenter', () => {
-                hoverText.style.visibility = 'visible';
-            });
-            
-            resetButton.addEventListener('mouseleave', () => {
-                hoverText.style.visibility = 'hidden';
-            });
-
             // Hover effect for state-fill
             map.on('mouseenter', 'state-fill', (e) => {
                 // Change the cursor to pointer
@@ -244,24 +375,24 @@
             });
 
             // Show popup on hover
-            map.on('mouseenter', 'member-locations-layer', (e) => {
+            map.on('mouseenter', 'members-layer', (e) => {
                 // Change cursor to pointer
                 map.getCanvas().style.cursor = 'pointer';
                 // Set the hover layer's visibility to visible
                 if (e.features.length > 0) {
                     if (hoveredFeatureId) {
                         map.setFeatureState(
-                            { source: 'member-locations', sourceLayer: 'members221022-82cdcp', id: hoveredFeatureId },
+                            { source: 'members', sourceLayer: 'members-71z56w', id: hoveredFeatureId },
                             { hover: false }
                         );
                     }
                     hoveredFeatureId = e.features[0].id;
                     map.setFeatureState(
-                        { source: 'member-locations', sourceLayer: 'members221022-82cdcp', id: hoveredFeatureId },
+                        { source: 'members', sourceLayer: 'members-71z56w', id: hoveredFeatureId },
                         { hover: true }
                     );
                     // Show the hover layer
-                    map.setLayoutProperty('member-locations-layer-hover', 'visibility', 'visible');
+                    map.setLayoutProperty('members-layer-hover', 'visibility', 'visible');
                 }
 
                 // Set popup content based on properties of the hovered feature
@@ -284,44 +415,44 @@
             });
 
             // Update popup position on mousemove (optional for smoother interaction)
-            map.on('mousemove', 'member-locations-layer', (e) => {
+            map.on('mousemove', 'members-layer', (e) => {
                 popup.setLngLat(e.lngLat);
                 map.getCanvas().style.cursor = 'pointer';
                 // Reset the previous feature's hover state
                 if (hoveredFeatureId && hoveredFeatureId !== e.features[0].id) {
                     map.setFeatureState(
-                        { source: 'member-locations', sourceLayer: 'members221022-82cdcp', id: hoveredFeatureId },
+                        { source: 'members', sourceLayer: 'members-71z56w', id: hoveredFeatureId },
                         { hover: false }
                     );
                 }
                 // Set the hover state for the new feature
                 hoveredFeatureId = e.features[0].id;
                 map.setFeatureState(
-                    { source: 'member-locations', sourceLayer: 'members221022-82cdcp', id: hoveredFeatureId },
+                    { source: 'members', sourceLayer: 'members-71z56w', id: hoveredFeatureId },
                     { hover: true }
                 );
             });
 
             // Remove popup and reset cursor on mouse leave
-            map.on('mouseleave', 'member-locations-layer', () => {
+            map.on('mouseleave', 'members-layer', () => {
                 map.getCanvas().style.cursor = ''; // Reset cursor
                 popup.remove(); // Remove popup
                 // Hide the hover layer and reset the feature state
                 if (hoveredFeatureId) {
                     map.setFeatureState(
-                        { source: 'member-locations', sourceLayer: 'members221022-82cdcp', id: hoveredFeatureId },
+                        { source: 'members', sourceLayer: 'members-71z56w', id: hoveredFeatureId },
                         { hover: false }
                     );
                 }
                 hoveredFeatureId = null;
-                map.setLayoutProperty('member-locations-layer-hover', 'visibility', 'none');
+                map.setLayoutProperty('members-layer-hover', 'visibility', 'none');
             });
 
             // Ensure the layer is always visible and start with an empty filter
-            if (map.getLayer('member-locations-layer')) {
-                map.setFilter('member-locations-layer', ['==', 'state', '']);
+            if (map.getLayer('members-layer')) {
+                map.setFilter('members-layer', ['==', 'state', '']);
             } else {
-                console.error("Layer 'member-locations-layer' not found on load.");
+                console.error("Layer 'members-layer' not found on load.");
             }
 
             let isStateSelected = false;
@@ -329,17 +460,20 @@
             map.on('click', 'state-fill', (e) => {
                 const stateName = e.features[0].properties.STUSPS10;
                 isStateSelected = true;
+                
                 // Set fill to transparent for selected state
                 map.setPaintProperty('state-fill', 'fill-opacity', 0);
-                // Bolden outline and filter to the selected state
-                map.setPaintProperty('state-outline', 'line-width', 3); // Thicker line
-                map.setFilter('state-outline', ['==', ['get', 'STUSPS10'], stateName]); // Filter to selected state
-                map.setFilter('state-fill', ['!=', ['get', 'STUSPS10'], stateName]); // Filter to not show selected state
+                map.setPaintProperty('state-outline', 'line-width', 3);
+                map.setFilter('state-outline', ['==', ['get', 'STUSPS10'], stateName]);
+                map.setFilter('state-fill', ['!=', ['get', 'STUSPS10'], stateName]);
+                
                 // Show member locations for the selected state
-                if (map.getLayer('member-locations-layer')) {
-                    map.setFilter('member-locations-layer', ['==', ['get', 'state'], stateName]);
-                    map.setLayoutProperty('member-locations-layer', 'visibility', 'visible');
+                if (map.getLayer('members-layer')) {
+                    map.setFilter('members-layer', ['==', ['get', 'state'], stateName]);
+                    map.setFilter('members-layer-hover', ['==', ['get', 'state'], stateName]);
+                    map.setLayoutProperty('members-layer', 'visibility', 'visible');
                 }
+
                 const coordinates = e.features[0].geometry.coordinates;
                 function extractCoordinates(coord) {
                     const result = [];
@@ -360,21 +494,89 @@
                 const bounds = validCoordinates.reduce((bounds, coord) => {
                     return bounds.extend(coord);
                 }, new mapboxgl.LngLatBounds(validCoordinates[0], validCoordinates[0]));
-                map.fitBounds(bounds, { padding: 20 });
+                map.fitBounds(bounds, { 
+                    padding: {
+                        top: 20,
+                        bottom: 20,
+                        left: 20,
+                        right: 220  // Increased right padding to account for the 200px wide member list + some margin
+                    },
+                    duration: 500
+                });
                 map.once('idle', () => {
-                    if (map.getLayer('member-locations-layer')) {
-                        console.log(`Filtering 'member-locations-layer' for state: ${stateName}`);
-                        map.setFilter('member-locations-layer', ['==', ['get', 'state'], stateName]);
-                        map.setLayoutProperty('member-locations-layer', 'visibility', 'visible'); // Ensure visibility is set to 'visible'
+                    if (map.getLayer('members-layer')) {
+                        console.log(`Filtering 'members-layer' for state: ${stateName}`);
+                        map.setFilter('members-layer', ['==', ['get', 'state'], stateName]);
+                        map.setLayoutProperty('members-layer', 'visibility', 'visible'); // Ensure visibility is set to 'visible'
                     } else {
-                        console.error("'member-locations-layer' is not loaded or accessible.");
+                        console.error("'members-layer' is not loaded or accessible.");
                     }
                 });
                 popupState.remove();
+
+                const stateFullName = e.features[0].properties.NAME10;
+                
+                // Query and display members for the clicked state
+                const members = map.querySourceFeatures('members', {
+                    sourceLayer: 'members-71z56w',
+                    filter: ['==', ['get', 'state'], stateName]
+                });
+                
+                // Remove duplicate entries based on company_na
+                const uniqueMembers = Array.from(new Set(members.map(m => m.properties.company_na)))
+                    .map(name => members.find(m => m.properties.company_na === name));
+                
+                const listContainer = document.getElementById('member-list-container');
+                const memberList = document.getElementById('member-list');
+                const header = listContainer.querySelector('.member-list-header');
+                
+                // Clear existing list
+                memberList.innerHTML = '';
+                header.textContent = `${stateFullName} Members`;
+                
+                // Sort members alphabetically by company name
+                uniqueMembers.sort((a, b) => 
+                    a.properties.company_na.localeCompare(b.properties.company_na)
+                );
+                
+                // Add members to list
+                uniqueMembers.forEach(member => {
+                    const item = document.createElement('div');
+                    item.className = 'member-list-item';
+                    item.textContent = member.properties.company_na;
+                    
+                    // Update hover handlers to use the new highlight layer
+                    item.addEventListener('mouseenter', () => {
+                        map.setFilter('members-highlight', [
+                            'all',
+                            ['==', ['get', 'state'], stateName],
+                            ['==', ['get', 'company_na'], member.properties.company_na]
+                        ]);
+                        map.setLayoutProperty('members-highlight', 'visibility', 'visible');
+                    });
+                    
+                    item.addEventListener('mouseleave', () => {
+                        map.setLayoutProperty('members-highlight', 'visibility', 'none');
+                    });
+                    
+                    // Open URL on click
+                    item.addEventListener('click', () => {
+                        const url = member.properties.url;
+                        if (url) {
+                            const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                            window.open(fullUrl, '_blank');
+                        }
+                    });
+                    
+                    memberList.appendChild(item);
+                });
+                
+                // Show the list container
+                listContainer.style.display = 'block';
             });
 
             // Add popups for member locations
-            map.on('click', 'member-locations-layer', (e) => {
+            map.on('click', 'members-layer', (e) => {
                 console.log("Member location properties:", e.features[0].properties);
                 const coordinates = e.features[0].geometry.coordinates.slice();
                 const url = e.features[0].properties.url; // Ensure 'url' exists in the feature properties
@@ -410,13 +612,22 @@
             if (placeType === 'region') {
                 // Handle state zoom and filter member locations based on the selected state
                 map.fitBounds(result.bbox, { padding: 20 });
-                map.setFilter('member-locations-layer', ['==', 'state', result.text]); // Filter members for selected state
+                map.setFilter('members-layer', ['==', 'state', result.text]); // Filter members for selected state
             }
         });
 
-        // Function to ensure sources are fully loaded before applying member counts
+        // Add this function to check if sources are loaded
+        function waitForSources() {
+            if (!map.isSourceLoaded('state-boundaries') || !map.isSourceLoaded('members')) {
+                setTimeout(waitForSources, 100); // Retry after 100 ms
+            } else {
+                onSourceDataLoaded(); // Call once when sources are fully loaded
+            }
+        }
+
+        // Function to handle source data loading
         function onSourceDataLoaded() {
-            if (map.isSourceLoaded('state-boundaries') && map.isSourceLoaded('member-locations')) {
+            if (map.isSourceLoaded('state-boundaries') && map.isSourceLoaded('members')) {
                 // Apply default member counts to avoid null warnings
                 applyDefaultMemberCounts();
                 // Calculate and apply actual member counts
@@ -426,10 +637,10 @@
 
         function calculateAndApplyMemberCounts() {
             const memberCounts = {};
-            const features = map.querySourceFeatures('member-locations', { sourceLayer: 'members221022-82cdcp' });
+            const features = map.querySourceFeatures('members', { sourceLayer: 'members-71z56w' });
 
             if (features.length === 0) {
-                console.warn("No features found in 'member-locations'. Please check the source layer name.");
+                console.warn("No features found in 'members'. Please check the source layer name.");
                 return;
             }
             features.forEach((feature) => {
@@ -483,32 +694,45 @@
             });
         }
 
-        // Retry mechanism to check sources repeatedly until they are fully loaded
-        function waitForSources() {
-            if (!map.isSourceLoaded('state-boundaries') || !map.isSourceLoaded('member-locations')) {
-                console.log("Sources not yet fully loaded, retrying...");
-                setTimeout(waitForSources, 100); // Retry after 100 ms
-            } else {
-                onSourceDataLoaded(); // Call once when sources are fully loaded
-            }
-        }
-
-        // Define the reset function
+        // Update the resetMap function
         function resetMap() {
-            map.flyTo({
-                center: [-96, 37.8], // Original center
-                zoom: 3 // Original zoom level
-            });
-            // Restore state-fill opacity and remove state-outline filter
-            map.setFilter('state-fill', null);
-            map.setPaintProperty('state-fill', 'fill-opacity', 0.6); 
-            map.setFilter('state-outline', null); 
-            map.setPaintProperty('state-outline', 'line-width', 1.5); 
-            // Hide member locations layer
-            if (map.getLayer('member-locations-layer')) {
-                map.setLayoutProperty('member-locations-layer', 'visibility', 'none');
-                map.setFilter('member-locations-layer', null); 
+            console.log("Reset map function started");
+            
+            // Hide member layer dots immediately
+            if (map.getLayer('members-layer')) {
+                map.setLayoutProperty('members-layer', 'visibility', 'none');
+                map.setFilter('members-layer', null);
+                map.setFilter('members-layer-hover', null);
+                console.log("Member layer visibility set to none");
             }
+            
+            map.flyTo({
+                center: [-96, 37.8],
+                zoom: 3,
+                duration: 1000
+            });
+            
+            // Wait for the animation to complete before resetting other properties
+            map.once('moveend', () => {
+                // Reset map filters and properties
+                map.setFilter('state-fill', null);
+                map.setPaintProperty('state-fill', 'fill-opacity', 0.6);
+                map.setFilter('state-outline', null);
+                map.setPaintProperty('state-outline', 'line-width', 1.5);
+                
+                // Reset state selection flag
+                isStateSelected = false;
+                
+                // Hide member list
+                document.getElementById('member-list-container').style.display = 'none';
+
+                // Wait for sources to be loaded before calculating counts
+                waitForSources();
+            });
+
+            // Reset the highlight layer
+            map.setLayoutProperty('members-highlight', 'visibility', 'none');
+            map.setFilter('members-highlight', null);
         }
     </script>
 
