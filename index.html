@@ -140,6 +140,62 @@
         // Initialize the Mapbox GL JS map
         mapboxgl.accessToken = 'pk.eyJ1IjoiamVkbGViaSIsImEiOiJjanhhc3M4NnYwMmxsM3lyODlxYTFhOGRxIn0.746AmyW45uwRPeUy1PczOg';
 
+        // Add the static member counts
+        const stateMemberCounts = {
+            'AL': 49,
+            'AK': 0,
+            'AZ': 13,
+            'AR': 3,
+            'CA': 60,
+            'CO': 12,
+            'CT': 22,
+            'DE': 9,
+            'DC': 50,
+            'FL': 31,
+            'GA': 15,
+            'HI': 3,
+            'ID': 0,
+            'IL': 41,
+            'IN': 33,
+            'IA': 8,
+            'KS': 1,
+            'KY': 6,
+            'LA': 15,
+            'ME': 2,
+            'MD': 20,
+            'MA': 18,
+            'MI': 29,
+            'MN': 7,
+            'MS': 22,
+            'MO': 20,
+            'MT': 1,
+            'NE': 6,
+            'NV': 0,
+            'NH': 1,
+            'NJ': 23,
+            'NM': 11,
+            'NY': 87,
+            'NC': 27,
+            'ND': 0,
+            'OH': 80,
+            'OK': 0,
+            'OR': 16,
+            'PA': 81,
+            'PR': 2,
+            'RI': 6,
+            'SC': 5,
+            'SD': 0,
+            'TN': 16,
+            'TX': 27,
+            'UT': 2,
+            'VT': 0,
+            'VA': 16,
+            'WA': 12,
+            'WV': 0,
+            'WI': 24,
+            'WY': 0
+        };
+
         const map = new mapboxgl.Map({
             container: 'map', // Container ID
             style: 'mapbox://styles/jedlebi/cltg2vre600wz01p02c3jf3h3', // Style URL
@@ -459,6 +515,7 @@
 
             map.on('click', 'state-fill', (e) => {
                 const stateName = e.features[0].properties.STUSPS10;
+                const stateFullName = e.features[0].properties.NAME10;
                 isStateSelected = true;
                 
                 // Set fill to transparent for selected state
@@ -514,65 +571,67 @@
                 });
                 popupState.remove();
 
-                const stateFullName = e.features[0].properties.NAME10;
-                
-                // Query and display members for the clicked state
-                const members = map.querySourceFeatures('members', {
-                    sourceLayer: 'members-71z56w',
-                    filter: ['==', ['get', 'state'], stateName]
+                // Ensure the member list is displayed by waiting for the map to finish loading
+                map.once('idle', () => {
+                    // Query and display members for the clicked state
+                    const members = map.querySourceFeatures('members', {
+                        sourceLayer: 'members-71z56w',
+                        filter: ['==', ['get', 'state'], stateName]
+                    });
+                    
+                    // Remove duplicate entries based on company_na
+                    const uniqueMembers = Array.from(new Set(members.map(m => m.properties.company_na)))
+                        .map(name => members.find(m => m.properties.company_na === name));
+                    
+                    const listContainer = document.getElementById('member-list-container');
+                    const memberList = document.getElementById('member-list');
+                    const header = listContainer.querySelector('.member-list-header');
+                    
+                    // Clear existing list
+                    memberList.innerHTML = '';
+                    
+                    // Update header with state name and member count
+                    header.textContent = `${stateFullName} Members`;
+                    
+                    // Sort members alphabetically by company name
+                    uniqueMembers.sort((a, b) => 
+                        a.properties.company_na.localeCompare(b.properties.company_na)
+                    );
+                    
+                    // Add members to list
+                    uniqueMembers.forEach(member => {
+                        const item = document.createElement('div');
+                        item.className = 'member-list-item';
+                        item.textContent = member.properties.company_na;
+                        
+                        // Add hover and click handlers
+                        item.addEventListener('mouseenter', () => {
+                            map.setFilter('members-highlight', [
+                                'all',
+                                ['==', ['get', 'state'], stateName],
+                                ['==', ['get', 'company_na'], member.properties.company_na]
+                            ]);
+                            map.setLayoutProperty('members-highlight', 'visibility', 'visible');
+                        });
+                        
+                        item.addEventListener('mouseleave', () => {
+                            map.setLayoutProperty('members-highlight', 'visibility', 'none');
+                        });
+                        
+                        item.addEventListener('click', () => {
+                            const url = member.properties.url;
+                            if (url) {
+                                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                                window.open(fullUrl, '_blank');
+                            }
+                        });
+                        
+                        memberList.appendChild(item);
+                    });
+                    
+                    // Show the list container
+                    listContainer.style.display = 'block';
                 });
-                
-                // Remove duplicate entries based on company_na
-                const uniqueMembers = Array.from(new Set(members.map(m => m.properties.company_na)))
-                    .map(name => members.find(m => m.properties.company_na === name));
-                
-                const listContainer = document.getElementById('member-list-container');
-                const memberList = document.getElementById('member-list');
-                const header = listContainer.querySelector('.member-list-header');
-                
-                // Clear existing list
-                memberList.innerHTML = '';
-                header.textContent = `${stateFullName} Members`;
-                
-                // Sort members alphabetically by company name
-                uniqueMembers.sort((a, b) => 
-                    a.properties.company_na.localeCompare(b.properties.company_na)
-                );
-                
-                // Add members to list
-                uniqueMembers.forEach(member => {
-                    const item = document.createElement('div');
-                    item.className = 'member-list-item';
-                    item.textContent = member.properties.company_na;
-                    
-                    // Update hover handlers to use the new highlight layer
-                    item.addEventListener('mouseenter', () => {
-                        map.setFilter('members-highlight', [
-                            'all',
-                            ['==', ['get', 'state'], stateName],
-                            ['==', ['get', 'company_na'], member.properties.company_na]
-                        ]);
-                        map.setLayoutProperty('members-highlight', 'visibility', 'visible');
-                    });
-                    
-                    item.addEventListener('mouseleave', () => {
-                        map.setLayoutProperty('members-highlight', 'visibility', 'none');
-                    });
-                    
-                    // Open URL on click
-                    item.addEventListener('click', () => {
-                        const url = member.properties.url;
-                        if (url) {
-                            const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                            window.open(fullUrl, '_blank');
-                        }
-                    });
-                    
-                    memberList.appendChild(item);
-                });
-                
-                // Show the list container
-                listContainer.style.display = 'block';
             });
 
             // Add popups for member locations
@@ -636,26 +695,8 @@
         }
 
         function calculateAndApplyMemberCounts() {
-            const memberCounts = {};
-            const features = map.querySourceFeatures('members', { sourceLayer: 'members-71z56w' });
-
-            if (features.length === 0) {
-                console.warn("No features found in 'members'. Please check the source layer name.");
-                return;
-            }
-            features.forEach((feature) => {
-                const state = feature.properties.state; // Ensure each member has a 'state' property
-                if (state) {
-                    memberCounts[state] = (memberCounts[state] || 0) + 1;
-                }
-            });
-            // Apply the member counts to each state in `state-boundaries`
-            applyMemberCountsToStates(memberCounts);
-        }
-
-        function applyMemberCountsToStates(counts) {
             const stateFeatures = map.querySourceFeatures('state-boundaries', { sourceLayer: 'State_Shoreline-al2frv' });
-
+            
             if (stateFeatures.length === 0) {
                 console.warn("No state features found in 'state-boundaries'. Check source layer name.");
                 return;
@@ -663,18 +704,16 @@
 
             stateFeatures.forEach((stateFeature) => {
                 const stateId = stateFeature.id;
-                const stateCode = stateFeature.properties.STUSPS10; // Check if 'STUSPS10' is defined
+                const stateCode = stateFeature.properties.STUSPS10;
                 if (stateCode) {
-                    const count = counts[stateCode] || 0; // Default count to 0 if not found in `counts`
+                    const count = stateMemberCounts[stateCode] || 0;
                     map.setFeatureState(
                         { source: 'state-boundaries', sourceLayer: 'State_Shoreline-al2frv', id: stateId },
                         { member_count: count }
                     );
-                } else {
-                    console.warn("State feature missing 'STUSPS10' property:", stateFeature);
                 }
             });
-            // Force a repaint to ensure colors update
+            
             map.triggerRepaint();
         }
 
@@ -703,8 +742,11 @@
                 map.setLayoutProperty('members-layer', 'visibility', 'none');
                 map.setFilter('members-layer', null);
                 map.setFilter('members-layer-hover', null);
-                console.log("Member layer visibility set to none");
             }
+            
+            // Hide member list container
+            const listContainer = document.getElementById('member-list-container');
+            listContainer.style.display = 'none';
             
             map.flyTo({
                 center: [-96, 37.8],
@@ -723,8 +765,11 @@
                 // Reset state selection flag
                 isStateSelected = false;
                 
-                // Hide member list
-                document.getElementById('member-list-container').style.display = 'none';
+                // Clear member list
+                const memberList = document.getElementById('member-list');
+                if (memberList) {
+                    memberList.innerHTML = '';
+                }
 
                 // Wait for sources to be loaded before calculating counts
                 waitForSources();
