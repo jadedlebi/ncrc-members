@@ -143,57 +143,48 @@
         // Add the static member counts
         const stateMemberCounts = {
             'AL': 49,
-            'AK': 0,
-            'AZ': 13,
             'AR': 3,
+            'AZ': 13,
             'CA': 60,
-            'CO': 12,
-            'CT': 22,
-            'DE': 9,
+            'CO': 11,
+            'CT': 11,
             'DC': 50,
+            'DE': 9,
             'FL': 31,
             'GA': 15,
             'HI': 3,
-            'ID': 0,
-            'IL': 41,
-            'IN': 33,
-            'IA': 8,
+            'IA': 4,
+            'IL': 20,
+            'IN': 20,
             'KS': 1,
             'KY': 6,
-            'LA': 15,
-            'ME': 2,
-            'MD': 20,
+            'LA': 10,
             'MA': 18,
+            'MD': 20,
+            'ME': 2,
             'MI': 29,
             'MN': 7,
-            'MS': 22,
-            'MO': 20,
+            'MO': 12,
+            'MS': 11,
             'MT': 1,
-            'NE': 6,
-            'NV': 0,
-            'NH': 1,
-            'NJ': 23,
-            'NM': 11,
-            'NY': 87,
             'NC': 27,
-            'ND': 0,
-            'OH': 80,
-            'OK': 0,
+            'NE': 3,
+            'NH': 1,
+            'NJ': 12,
+            'NM': 11,
+            'NY': 48,
+            'OH': 52,
             'OR': 16,
-            'PA': 81,
+            'PA': 41,
             'PR': 2,
-            'RI': 6,
+            'RI': 3,
             'SC': 5,
-            'SD': 0,
-            'TN': 16,
+            'TN': 13,
             'TX': 27,
-            'UT': 2,
-            'VT': 0,
+            'UT': 1,
             'VA': 16,
             'WA': 12,
-            'WV': 0,
-            'WI': 24,
-            'WY': 0
+            'WI': 19
         };
 
         const map = new mapboxgl.Map({
@@ -649,6 +640,32 @@
             });
 
             map.on('sourcedata', onSourceDataLoaded);
+
+            // Add this function after map.on('load', ...)
+            function logMemberCounts() {
+                const memberCounts = {};
+                const features = map.querySourceFeatures('members', { 
+                    sourceLayer: 'members-71z56w'
+                });
+
+                // Count members by state
+                features.forEach(feature => {
+                    const state = feature.properties.state;
+                    if (state) {
+                        memberCounts[state] = (memberCounts[state] || 0) + 1;
+                    }
+                });
+
+                // Sort by state code
+                const sortedCounts = Object.fromEntries(
+                    Object.entries(memberCounts).sort(([a], [b]) => a.localeCompare(b))
+                );
+
+                console.log('Member counts by state:', sortedCounts);
+            }
+
+            // Add this line inside map.on('load', ...) after all layers are added
+            map.once('idle', logMemberCounts);
         });
 
         // Listen for map events where we only reset `state-fill` if `isStateSelected` is false
