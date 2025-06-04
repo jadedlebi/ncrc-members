@@ -276,7 +276,7 @@
                 id: 'members-layer',
                 type: 'circle',
                 source: 'members',
-                'source-layer': 'members-71z56w',
+                'source-layer': 'members-dsulzu',
                 paint: {
                     'circle-radius': 8,
                     'circle-color': '#173B4A',
@@ -292,7 +292,7 @@
                 id: 'members-layer-hover',
                 type: 'circle',
                 source: 'members',
-                'source-layer': 'members-71z56w',
+                'source-layer': 'members-dsulzu',
                 paint: {
                     'circle-radius': [
                         'case',
@@ -320,7 +320,7 @@
                 id: 'members-highlight',
                 type: 'circle',
                 source: 'members',
-                'source-layer': 'members-71z56w',
+                'source-layer': 'members-dsulzu',
                 paint: {
                     'circle-radius': 15,
                     'circle-color': '#FFC23A',
@@ -336,7 +336,7 @@
             waitForSources();
             // Calculate member counts by state and apply to state boundaries
             const memberCounts = {};
-            const features = map.querySourceFeatures('members', { sourceLayer: 'members-71z56w' });
+            const features = map.querySourceFeatures('members', { sourceLayer: 'members-dsulzu' });
 
             features.forEach((feature) => {
                 const state = feature.properties.state; // Assuming each member has a 'state' property
@@ -429,13 +429,13 @@
                 if (e.features.length > 0) {
                     if (hoveredFeatureId) {
                         map.setFeatureState(
-                            { source: 'members', sourceLayer: 'members-71z56w', id: hoveredFeatureId },
+                            { source: 'members', sourceLayer: 'members-dsulzu', id: hoveredFeatureId },
                             { hover: false }
                         );
                     }
                     hoveredFeatureId = e.features[0].id;
                     map.setFeatureState(
-                        { source: 'members', sourceLayer: 'members-71z56w', id: hoveredFeatureId },
+                        { source: 'members', sourceLayer: 'members-dsulzu', id: hoveredFeatureId },
                         { hover: true }
                     );
                     // Show the hover layer
@@ -468,14 +468,14 @@
                 // Reset the previous feature's hover state
                 if (hoveredFeatureId && hoveredFeatureId !== e.features[0].id) {
                     map.setFeatureState(
-                        { source: 'members', sourceLayer: 'members-71z56w', id: hoveredFeatureId },
+                        { source: 'members', sourceLayer: 'members-dsulzu', id: hoveredFeatureId },
                         { hover: false }
                     );
                 }
                 // Set the hover state for the new feature
                 hoveredFeatureId = e.features[0].id;
                 map.setFeatureState(
-                    { source: 'members', sourceLayer: 'members-71z56w', id: hoveredFeatureId },
+                    { source: 'members', sourceLayer: 'members-dsulzu', id: hoveredFeatureId },
                     { hover: true }
                 );
             });
@@ -487,7 +487,7 @@
                 // Hide the hover layer and reset the feature state
                 if (hoveredFeatureId) {
                     map.setFeatureState(
-                        { source: 'members', sourceLayer: 'members-71z56w', id: hoveredFeatureId },
+                        { source: 'members', sourceLayer: 'members-dsulzu', id: hoveredFeatureId },
                         { hover: false }
                     );
                 }
@@ -566,7 +566,7 @@
                 map.once('idle', () => {
                     // Query and display members for the clicked state
                     const members = map.querySourceFeatures('members', {
-                        sourceLayer: 'members-71z56w',
+                        sourceLayer: 'members-dsulzu',
                         filter: ['==', ['get', 'state'], stateName]
                     });
                     
@@ -645,7 +645,7 @@
             function logMemberCounts() {
                 const memberCounts = {};
                 const features = map.querySourceFeatures('members', { 
-                    sourceLayer: 'members-71z56w'
+                    sourceLayer: 'members-dsulzu'
                 });
 
                 // Count members by state
