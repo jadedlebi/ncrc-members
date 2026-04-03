@@ -1,0 +1,132 @@
+/* NCRC members map — layout and UI chrome (Mapbox GL styles load from CDN) */
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+#map {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+}
+
+#search-bar {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#reset-button {
+    position: relative;
+}
+
+#reset-button button {
+    padding: 6px 12px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+}
+
+#reset-button button:hover {
+    background: #f0f0f0;
+}
+
+#reset-button button img {
+    width: 40px;
+    height: 20px;
+    opacity: 0.8;
+}
+
+#reset-button .reset-hover-text {
+    visibility: hidden;
+    position: absolute;
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 5px 10px;
+    border-radius: 4px;
+    z-index: 1000;
+    white-space: nowrap;
+    font-size: 12px;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 5px;
+}
+
+#reset-button:hover .reset-hover-text {
+    visibility: visible;
+}
+
+#hover-text {
+    position: static;
+    visibility: visible;
+    transform: none;
+    background: none;
+    color: #666;
+    padding: 0;
+}
+
+#ncrc-logo {
+    position: absolute;
+    bottom: 0.5px;
+    left: 100px;
+    z-index: 1;
+}
+
+#ncrc-logo img {
+    height: 30px;
+}
+
+#member-list-container {
+    position: absolute;
+    top: 60px;
+    right: 10px;
+    width: 200px;
+    max-height: 80vh;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    overflow-y: auto;
+    display: none;
+    z-index: 2;
+    font-family: Arial, sans-serif;
+}
+
+.member-list-header {
+    position: sticky;
+    top: 0;
+    background: #173b4a;
+    color: white;
+    padding: 15px;
+    font-weight: bold;
+    text-align: center;
+    font-size: 18px;
+    border-radius: 4px 4px 0 0;
+}
+
+.member-list-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.member-list-item:hover {
+    background-color: #f0f0f0;
+}
+
+.member-list-item:last-child {
+    border-bottom: none;
+}

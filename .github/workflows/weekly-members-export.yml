@@ -1,0 +1,43 @@
+# Weekly: run the BigQuery → Mapbox tileset upload on Cloud Run Jobs.
+# Secret names align with `.env.example` (GitHub Actions section).
+#
+# Prerequisites in GCP:
+# - Cloud Run Job (Dockerfile.job): BQ_TABLE, MAPBOX_TILESET, MAPBOX_ACCESS_TOKEN (Secret Manager → env)
+# - Service account: bigquery.jobs.create + bigquery.dataViewer on the dataset
+# - GitHub OIDC: Workload Identity Federation → repository secrets below
+
+name: Weekly members export
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  execute-export-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Execute Cloud Run Job
+        env:
+          GCP_REGION_SECRET: ${{ secrets.GCP_REGION }}
+        run: |
+          REGION="${GCP_REGION_SECRET:-us-east1}"
+          gcloud run jobs execute "${{ secrets.GCP_RUN_JOB_NAME }}" \
+            --region="${REGION}" \
+            --project="${{ secrets.GCP_PROJECT_ID }}" \
+            --wait

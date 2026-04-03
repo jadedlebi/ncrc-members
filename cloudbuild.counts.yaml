@@ -1,0 +1,14 @@
+# Build Dockerfile.counts → Artifact Registry (used by scripts/deploy-cloud-run.sh)
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'Dockerfile.counts'
+      - '-t'
+      - '${_IMAGE}'
+      - '.'
+images:
+  - '${_IMAGE}'
+substitutions:
+  _IMAGE: us-east1-docker.pkg.dev/PROJECT_ID/ncrc-members/counts:latest

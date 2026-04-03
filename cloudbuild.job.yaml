@@ -1,0 +1,15 @@
+# Build Dockerfile.job → Artifact Registry (used by scripts/deploy-cloud-run.sh)
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'Dockerfile.job'
+      - '-t'
+      - '${_IMAGE}'
+      - '.'
+images:
+  - '${_IMAGE}'
+substitutions:
+  # Overridden by scripts/deploy-cloud-run.sh; placeholder only.
+  _IMAGE: us-east1-docker.pkg.dev/PROJECT_ID/ncrc-members/job:latest
