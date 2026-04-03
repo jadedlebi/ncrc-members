@@ -7,6 +7,16 @@
         }
         mapboxgl.accessToken = MAPBOX_PUBLIC_ACCESS_TOKEN;
 
+        if (
+            MAPBOX_PUBLIC_ACCESS_TOKEN === 'PLACEHOLDER_UPDATE_ME' ||
+            (MAPBOX_PUBLIC_ACCESS_TOKEN && String(MAPBOX_PUBLIC_ACCESS_TOKEN).indexOf('PLACEHOLDER') === 0)
+        ) {
+            console.error(
+                'Mapbox public token is still the Secret Manager placeholder. Replace mapbox-members-public-token with your real pk. token, then redeploy the web service (see README).'
+            );
+            return;
+        }
+
         // Vector tilesets + source-layers from env (see .env.example): state choropleth + member circles.
         const MAPBOX_STYLE_URL = window.MAPBOX_STYLE_URL || '';
         const MAPBOX_TILESET_URL = window.MAPBOX_TILESET_URL || '';

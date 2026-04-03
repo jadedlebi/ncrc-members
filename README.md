@@ -28,7 +28,13 @@ Static Mapbox GL map with a weekly BigQuery → Mapbox tileset job on Google Clo
 
 ## Deploy to Cloud Run
 
-1. Ensure **Secret Manager** has real values for the names used in `scripts/deploy-cloud-run.sh` (defaults: `mapbox-members-upload-token`, `mapbox-members-public-token`). The first deploy may create placeholders — replace them and redeploy.
+1. Ensure **Secret Manager** has real values for the names used in `scripts/deploy-cloud-run.sh` (defaults: `mapbox-members-upload-token`, `mapbox-members-public-token`). The first deploy may create placeholders — replace them and redeploy. Example (from a shell with `MAPBOX_PUBLIC_ACCESS_TOKEN` set, e.g. after `set -a && source .env && set +a`):
+
+   ```bash
+   echo -n "$MAPBOX_PUBLIC_ACCESS_TOKEN" | gcloud secrets versions add mapbox-members-public-token --data-file=- --project="$GCP_PROJECT_ID"
+   ```
+
+   Then redeploy the **web** service so the new secret version is mounted.
 2. From the repo root, with `.env` loaded (script uses `scripts/lib/common.sh`):
 
    ```bash
