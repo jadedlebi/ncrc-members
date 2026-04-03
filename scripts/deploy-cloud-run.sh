@@ -132,48 +132,28 @@ else
 fi
 
 echo "Deploying Cloud Run service ${SERVICE_NAME_COUNTS} (BigQuery → JSON state counts)..."
-if gcloud run services describe "${SERVICE_NAME_COUNTS}" --region="${REGION}" --project="${PROJECT}" &>/dev/null; then
-  gcloud run services update "${SERVICE_NAME_COUNTS}" \
-    --region="${REGION}" \
-    --project="${PROJECT}" \
-    --image="${IMAGE_COUNTS}" \
-    --service-account="${SA_EMAIL}" \
-    --set-env-vars="GCP_PROJECT=${PROJECT},GOOGLE_CLOUD_PROJECT=${PROJECT},BQ_TABLE=${BQ_TABLE},STATE_COUNTS_CACHE_TTL_SEC=${STATE_COUNTS_CACHE_TTL_SEC}" \
-    --allow-unauthenticated
-else
-  gcloud run deploy "${SERVICE_NAME_COUNTS}" \
-    --region="${REGION}" \
-    --project="${PROJECT}" \
-    --image="${IMAGE_COUNTS}" \
-    --service-account="${SA_EMAIL}" \
-    --set-env-vars="GCP_PROJECT=${PROJECT},GOOGLE_CLOUD_PROJECT=${PROJECT},BQ_TABLE=${BQ_TABLE},STATE_COUNTS_CACHE_TTL_SEC=${STATE_COUNTS_CACHE_TTL_SEC}" \
-    --allow-unauthenticated
-fi
+# Use `run deploy` for create and update — `run services update` does not accept --allow-unauthenticated on some gcloud versions.
+gcloud run deploy "${SERVICE_NAME_COUNTS}" \
+  --region="${REGION}" \
+  --project="${PROJECT}" \
+  --image="${IMAGE_COUNTS}" \
+  --service-account="${SA_EMAIL}" \
+  --set-env-vars="GCP_PROJECT=${PROJECT},GOOGLE_CLOUD_PROJECT=${PROJECT},BQ_TABLE=${BQ_TABLE},STATE_COUNTS_CACHE_TTL_SEC=${STATE_COUNTS_CACHE_TTL_SEC}" \
+  --allow-unauthenticated
 
 COUNTS_URL="$(gcloud run services describe "${SERVICE_NAME_COUNTS}" --region="${REGION}" --project="${PROJECT}" --format='value(status.url)')"
 echo "  State counts API: ${COUNTS_URL}/"
 echo "  Set MEMBERS_STATE_COUNTS_URL in .env to this URL (plus trailing path / or /state-counts) and redeploy the web service."
 
 echo "Deploying Cloud Run service ${SERVICE_NAME}..."
-if gcloud run services describe "${SERVICE_NAME}" --region="${REGION}" --project="${PROJECT}" &>/dev/null; then
-  gcloud run services update "${SERVICE_NAME}" \
-    --region="${REGION}" \
-    --project="${PROJECT}" \
-    --image="${IMAGE_WEB}" \
-    --service-account="${SA_EMAIL}" \
-    --set-env-vars="MAPBOX_STYLE_URL=${MAPBOX_STYLE_URL},MAPBOX_TILESET_URL=${MAPBOX_TILESET_URL},MEMBERS_SOURCE_LAYER=${MEMBERS_SOURCE_LAYER},MEMBERS_STATE_COUNTS_URL=${MEMBERS_STATE_COUNTS_URL},MEMBERS_STATE_COUNTS_REFRESH_SEC=${MEMBERS_STATE_COUNTS_REFRESH_SEC},STATE_BOUNDARIES_TILESET_URL=${STATE_BOUNDARIES_TILESET_URL},STATE_BOUNDARIES_SOURCE_LAYER=${STATE_BOUNDARIES_SOURCE_LAYER}" \
-    --set-secrets="MAPBOX_PUBLIC_ACCESS_TOKEN=${SECRET_PUBLIC}:latest" \
-    --allow-unauthenticated
-else
-  gcloud run deploy "${SERVICE_NAME}" \
-    --region="${REGION}" \
-    --project="${PROJECT}" \
-    --image="${IMAGE_WEB}" \
-    --service-account="${SA_EMAIL}" \
-    --set-env-vars="MAPBOX_STYLE_URL=${MAPBOX_STYLE_URL},MAPBOX_TILESET_URL=${MAPBOX_TILESET_URL},MEMBERS_SOURCE_LAYER=${MEMBERS_SOURCE_LAYER},MEMBERS_STATE_COUNTS_URL=${MEMBERS_STATE_COUNTS_URL},MEMBERS_STATE_COUNTS_REFRESH_SEC=${MEMBERS_STATE_COUNTS_REFRESH_SEC},STATE_BOUNDARIES_TILESET_URL=${STATE_BOUNDARIES_TILESET_URL},STATE_BOUNDARIES_SOURCE_LAYER=${STATE_BOUNDARIES_SOURCE_LAYER}" \
-    --set-secrets="MAPBOX_PUBLIC_ACCESS_TOKEN=${SECRET_PUBLIC}:latest" \
-    --allow-unauthenticated
-fi
+gcloud run deploy "${SERVICE_NAME}" \
+  --region="${REGION}" \
+  --project="${PROJECT}" \
+  --image="${IMAGE_WEB}" \
+  --service-account="${SA_EMAIL}" \
+  --set-env-vars="MAPBOX_STYLE_URL=${MAPBOX_STYLE_URL},MAPBOX_TILESET_URL=${MAPBOX_TILESET_URL},MEMBERS_SOURCE_LAYER=${MEMBERS_SOURCE_LAYER},MEMBERS_STATE_COUNTS_URL=${MEMBERS_STATE_COUNTS_URL},MEMBERS_STATE_COUNTS_REFRESH_SEC=${MEMBERS_STATE_COUNTS_REFRESH_SEC},STATE_BOUNDARIES_TILESET_URL=${STATE_BOUNDARIES_TILESET_URL},STATE_BOUNDARIES_SOURCE_LAYER=${STATE_BOUNDARIES_SOURCE_LAYER}" \
+  --set-secrets="MAPBOX_PUBLIC_ACCESS_TOKEN=${SECRET_PUBLIC}:latest" \
+  --allow-unauthenticated
 
 echo
 echo "Done."
